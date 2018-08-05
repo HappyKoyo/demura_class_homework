@@ -39,9 +39,7 @@ class Localization:
         self.mymap = []
         #for odometry
         self.vel_x = 0.0
-        self.vel_y = 0.0
         self.dist_x = 0.0
-        self.dist_y = 0.0
         self.angle_z = 0.0
         self.time = time.time()
         #lidar
@@ -53,15 +51,14 @@ class Localization:
         self.time = time.time()
 
         self.vel_x += msg.linear_acceleration.x * time_diff
-        self.vel_y += msg.linear_acceleration.y * time_diff
         self.dist_x += self.vel_x * time_diff
-        self.dist_y += self.vel_y * time_diff
         self.angle_z += msg.angular_velocity.z * time_diff
         #print self.vel_x, self.vel_y, self.dist_x, self.dist_y
+        print msg.linear_acceleration.x
 
     def LaserCB(self,laser_scan):
         self.lidar_dist = np.array(laser_scan.ranges)
-        print self.lidar_dist.shape
+        #print self.lidar_dist.shape
 
     def mapCB(self,msg):
         PIXEL_UNIT = 20#２０ピクセル１メートル
@@ -159,17 +156,13 @@ class Localization:
     def updateParticle(self):
         rn = randn(2*PARTICLE_NUM)
         for i in range(0,PARTICLE_NUM):
-            self.particles[i]["x"] += self.dist_y# + rn[i*2]
-            self.particles[i]["y"] -= self.dist_x# + rn[i*2+1]
+            self.particles[i]["x"] += self.dist_x * math.cos(self.particles[i]["pitch"]) + rn[i*2]   * 0.1
+            self.particles[i]["y"] -= self.dist_x * math.sin(self.particles[i]["pitch"]) + rn[i*2+1] * 0.1
             self.particles[i]["pitch"] += self.angle_z
         self.dist_x = 0.0
-        self.dist_y = 0.0
         self.angle_z = 0.0
 
     def Localization(self):
-        #mymap = cv2.imread("/home/demulab/map/mymap.pgm",0)
-        #cv2.imshow("aaa",mymap)
-        #cv2.waitKey(1)
         self.visualizeParticle()
         self.visualizeLocalizedRobotPose()
         self.updateParticle()
